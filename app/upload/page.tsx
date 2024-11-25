@@ -1,4 +1,4 @@
-import { Navbar } from "@/components/Header";
+import { Navbar } from "@/components/Navbar";
 import { NutritionAnalyzer } from "@/components/NutritionAnalyzer";
 
 export default function Home() {

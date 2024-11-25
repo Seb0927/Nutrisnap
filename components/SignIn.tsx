@@ -1,11 +1,36 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
+import { auth } from "../firebase/firebaseConfig"
+import { useUser } from "@/context/UserContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import Link from "next/link"
 
 export function SignIn() {
+  const { user, setUser } = useUser();
+  const router = useRouter()
+
+  const handleSignUp = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const userInfo = result.user;
+        const loggedUser = {
+            uid: userInfo.uid,
+            email: userInfo.email,
+            displayName: userInfo.displayName,
+            photoURL: userInfo.photoURL
+        }
+        setUser(loggedUser);
+        router.push('/upload')
+    } catch (error) {
+        console.error("Error al iniciar sesión con Google: ", error);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f5ed] flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-white border-[#c0b9a8]">
@@ -17,7 +42,8 @@ export function SignIn() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
-            <Button 
+            <Button
+              onClick={handleSignUp}
               className="w-full bg-white text-[#5c4f3c] border-2 border-[#c0b9a8] hover:bg-[#f8f5ed] transition-colors duration-300"
               variant="outline"
             >
