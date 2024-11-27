@@ -11,6 +11,7 @@ import Link from "next/link"
 
 export function SignIn() {
   const { user, setUser } = useUser();
+  console.log(user)
   const router = useRouter()
 
   const handleSignUp = async () => {
