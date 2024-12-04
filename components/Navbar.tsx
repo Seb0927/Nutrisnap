@@ -21,18 +21,22 @@ export function Navbar() {
   return (
     <nav className="bg-white border-b border-[rgb(192,185,168)] py-4">
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href="/upload" className="flex items-center space-x-2">
           <span className="text-2xl font-bold text-[#8c7851]">Nutrisnap</span>
         </Link>
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" className="text-[#5c4f3c] hover:text-[#8c7851] hover:bg-[#f8f5ed]">
-            <Upload className="mr-2 h-4 w-4" />
-            Subir
-          </Button>
-          <Button variant="ghost" className="text-[#5c4f3c] hover:text-[#8c7851] hover:bg-[#f8f5ed]">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Asistente inteligente
-          </Button>
+          <Link href="/upload">
+            <Button variant="ghost" className="text-[#5c4f3c] hover:text-[#8c7851] hover:bg-[#f8f5ed]">
+              <Upload className="mr-2 h-4 w-4" />
+              Subir
+            </Button>
+          </Link>
+          <Link href="/asistente">
+            <Button variant="ghost" className="text-[#5c4f3c] hover:text-[#8c7851] hover:bg-[#f8f5ed]">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Asistente inteligente
+            </Button>
+          </Link>
           <div className="flex items-center space-x-2">
             <Avatar>
               <AvatarImage src={user?.photoURL || ''} alt="User" />

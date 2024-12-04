@@ -1,51 +1,104 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Upload, Utensils, Camera } from 'lucide-react'
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Upload, Utensils, Camera } from 'lucide-react';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export function NutritionAnalyzer() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [recommendations, setRecommendations] = useState<string | null>(null)
-  const [nutritionalValues, setNutritionalValues] = useState<{ name: string; amount: string; unit: string }[] | null>(null)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recommendations, setRecommendations] = useState<string | null>(null);
+  const [nutritionalValues, setNutritionalValues] = useState<{ name: string; amount: string; unit: string }[] | null>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string)
-        analyzeImage()
-      }
-      reader.readAsDataURL(file)
-    }
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not defined");
   }
 
-  const analyzeImage = () => {
-    setIsAnalyzing(true)
-    // Simulating API call delay
-    setTimeout(() => {
-      setRecommendations("Based on the image, this appears to be a balanced meal. The plate contains a good mix of proteins, carbohydrates, and vegetables. To improve, consider adding more leafy greens for increased fiber and micronutrients.")
-      setNutritionalValues([
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'models/gemini-1.5-flash' });
+
+  async function generateResults(imageData: string) {
+    try {
+      let result = await model.generateContent([
+        {
+          inlineData: {
+        data: imageData,
+        mimeType: "image/jpeg",
+          },
+        },
+        `Hola Gemini!
+        En estos momentos necesito que te comportes como un nutricionista profesional.
+        ¿Podrías generar en un párrafo corto una recomendación teniendo en cuenta si se trata de un plato balanceado o no? 
+        Ten en cuenta que esta información se mostrará en un dashboard por lo que no empieces respondiendo "Claro que si" ni similares.`,
+      ]);
+      setRecommendations(result.response.text());
+      // Process the result to extract nutritional values and recommendations
+      // Update the state with the extracted data
+      result = await model.generateContent([
+        {
+          inlineData: {
+        data: imageData,
+        mimeType: "image/jpeg",
+          },
+        },
+        `Necesito que me brindes la información nutricional de este plato usando este formato JSON (No incluyas texto, solamente el JSON, y no agreges decoradores como \`\`\`json), me interesan las calorías, proteínas, carbohidratos, grasas, grasas saturadas y fibra. 
+        
+        Esto es solamente por motivos experimentales por lo que puedes inventar los valores que creas correctos:
+
+        unity: { name: string; amount: string; unit: string }
+        Retorna: Array<unity>
+        `,
+      ]);
+
+      const jsonResponse = result.response.text().replace(/```json|```/g, '');
+      const parsedResponse = JSON.parse(jsonResponse);
+      setNutritionalValues(parsedResponse);
+
+      // setNutritionalValues();
+      
+      /* setNutritionalValues([
         { name: "Calories", amount: "450", unit: "kcal" },
         { name: "Protein", amount: "25", unit: "g" },
         { name: "Carbohydrates", amount: "55", unit: "g" },
         { name: "Fat", amount: "15", unit: "g" },
         { name: "Fiber", amount: "8", unit: "g" },
-      ])
-      setIsAnalyzing(false)
-    }, 2000)
+      ]); */
+    } catch (error) {
+      console.error("Error generating results: ", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target?.result as string;
+        setSelectedImage(imageData);
+        console.log("Image uploaded: " + imageData);
+        analyzeImage(imageData);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const analyzeImage = (imageData: string) => {
+    setIsAnalyzing(true);
+    generateResults(imageData.split(',')[1]); // Remove the base64 prefix
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-8 text-center text-[#8c7851]">Nutrition Analyzer</h1>
       <div className="grid gap-8 md:grid-cols-2">
-        <Card className="bg-white border-[#c0b9a8]">
+        <Card className="h-min bg-white border-[#c0b9a8]">
           <CardHeader>
-            <CardTitle className="text-[#8c7851]">Upload Your Plate Photo</CardTitle>
+            <CardTitle className="text-[#8c7851]">Sube la foto de tu plato</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-center w-full">
@@ -57,7 +110,7 @@ export function NutritionAnalyzer() {
                     <Upload className="w-10 h-10 mb-3 text-[#8c7851]" />
                   )}
                   <p className="mb-2 text-sm text-[#5c4f3c]">
-                    <span className="font-semibold">{selectedImage ? 'Change photo' : 'Click to upload'}</span> or drag and drop
+                    <span className="font-semibold">{selectedImage ? 'Cambiar imágen' : 'Click para subir'}</span> o arrastra y suelta aquí
                   </p>
                   <p className="text-xs text-[#8c7851]">PNG, JPG or GIF (MAX. 800x400px)</p>
                 </div>
@@ -65,7 +118,7 @@ export function NutritionAnalyzer() {
               </label>
             </div>
             {selectedImage && (
-              <div className="mt-4 flex justify-center items-center">
+              <div className="h-full mt-4 flex justify-center items-center">
                 <img src={selectedImage} alt="Uploaded plate" className="max-w-full h-40 rounded-lg border-2 border-[#c0b9a8]" />
               </div>
             )}
@@ -74,7 +127,7 @@ export function NutritionAnalyzer() {
         <div className="space-y-8">
           <Card className="bg-white border-[#c0b9a8]">
             <CardHeader>
-              <CardTitle className="text-[#8c7851]">AI Recommendations</CardTitle>
+              <CardTitle className="text-[#8c7851]">Asistente nutricional</CardTitle>
             </CardHeader>
             <CardContent>
               {isAnalyzing ? (
@@ -84,13 +137,13 @@ export function NutritionAnalyzer() {
               ) : recommendations ? (
                 <p className="text-[#5c4f3c]">{recommendations}</p>
               ) : (
-                <p className="text-[#8c7851]">Upload an image to get recommendations</p>
+                <p className="text-[#8c7851]">Sube una imagen para obtener recomendaciones</p>
               )}
             </CardContent>
           </Card>
           <Card className="bg-white border-[#c0b9a8]">
             <CardHeader>
-              <CardTitle className="text-[#8c7851]">Nutritional Values</CardTitle>
+              <CardTitle className="text-[#8c7851]">Valores nutricionales</CardTitle>
             </CardHeader>
             <CardContent>
               {isAnalyzing ? (
@@ -101,15 +154,15 @@ export function NutritionAnalyzer() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[#8c7851]">Nutrient</TableHead>
-                      <TableHead className="text-[#8c7851]">Amount</TableHead>
-                      <TableHead className="text-[#8c7851]">Unit</TableHead>
+                      <TableHead>Component</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Unit</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {nutritionalValues.map((nutrient, index) => (
-                      <TableRow key={index} className="border-b border-[#c0b9a8]">
-                        <TableCell className="font-medium text-[#5c4f3c]">{nutrient.name}</TableCell>
+                      <TableRow key={index}>
+                        <TableCell className="text-[#5c4f3c]">{nutrient.name}</TableCell>
                         <TableCell className="text-[#5c4f3c]">{nutrient.amount}</TableCell>
                         <TableCell className="text-[#5c4f3c]">{nutrient.unit}</TableCell>
                       </TableRow>
@@ -117,12 +170,12 @@ export function NutritionAnalyzer() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-[#8c7851]">Upload an image to see nutritional values</p>
+                <p className="text-[#8c7851]">Sube una imagen para ver los valores nutricionales</p>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }
