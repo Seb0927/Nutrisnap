@@ -7,7 +7,6 @@ import * as SpeechSDK from 'microsoft-cognitiveservices-speech-sdk';
 import { answerQuestion } from '@/helpers/aiModels';
 
 export function Assistant() {
-  const [firstTouch, setFirstTouch] = useState(false);
   const [answer, setAnswer] = useState("");
 
   //Text to speech
@@ -90,7 +89,6 @@ export function Assistant() {
           const response = await getResponse();
           setAnswer(response);
           speakText(response);
-          setFirstTouch(true);
         } else {
           console.error("Speech recognition error:", result.errorDetails);
         }
